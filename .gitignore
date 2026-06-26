@@ -1,0 +1,29 @@
+# Database
+data/*.duckdb
+data/*.duckdb.wal
+data/*.csv
+
+# Credentials and API keys
+credentials/
+*.json
+.env
+.env.*
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Logs and runtime files
+*.log
+*.pkl
+
+# OS
+.DS_Store
+Thumbs.db

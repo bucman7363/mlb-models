@@ -1,0 +1,6 @@
+pybaseball==2.2.7
+duckdb==1.5.4
+pandas==3.0.3
+requests==2.34.2
+gspread==6.2.1
+google-auth==2.55.1
