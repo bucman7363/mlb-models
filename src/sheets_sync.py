@@ -1,15 +1,12 @@
 """Push today's pitcher_stats and batter_stats to Google Sheets.
 
 Writes two tabs — "Pitcher Stats" and "Batter Stats" — into a single
-spreadsheet. On first run it creates the spreadsheet and prints the URL.
-On subsequent runs it finds the same spreadsheet by title and overwrites
-the data (header + rows replace everything below row 1).
+spreadsheet. The spreadsheet ID is stored in credentials/sheets_id.txt
+after first creation so subsequent runs use open_by_key (Sheets API only,
+no Drive API search needed).
 
 Credentials: place your service account JSON key at
     credentials/google_service_account.json
-Then share the spreadsheet with the service account email address
-(found in that JSON as "client_email") — or let this script create it
-fresh (it will auto-share with your account if you pass owner_email).
 """
 from __future__ import annotations
 
@@ -20,6 +17,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 CREDS_PATH = Path(__file__).resolve().parent.parent / "credentials" / "google_service_account.json"
+SHEETS_ID_PATH = Path(__file__).resolve().parent.parent / "credentials" / "sheets_id.txt"
 SPREADSHEET_TITLE = "MLB Pipeline Stats"
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -33,14 +31,22 @@ def _get_client() -> gspread.Client:
 
 
 def _get_or_create_spreadsheet(gc: gspread.Client, owner_email: str | None = None) -> gspread.Spreadsheet:
-    try:
-        return gc.open(SPREADSHEET_TITLE)
-    except gspread.SpreadsheetNotFound:
-        sh = gc.create(SPREADSHEET_TITLE)
-        if owner_email:
-            sh.share(owner_email, perm_type="user", role="writer")
-        print(f"Created spreadsheet: {sh.url}")
-        return sh
+    if SHEETS_ID_PATH.exists():
+        return gc.open_by_key(SHEETS_ID_PATH.read_text().strip())
+
+    sh = gc.create(SPREADSHEET_TITLE)
+    SHEETS_ID_PATH.write_text(sh.id)
+    if owner_email:
+        sh.share(owner_email, perm_type="user", role="writer")
+    print(f"Created spreadsheet: {sh.url}")
+    return sh
+
+
+def _serialize(v):
+    import datetime
+    if isinstance(v, (datetime.date, datetime.datetime)):
+        return v.isoformat()
+    return v
 
 
 def _write_tab(sh: gspread.Spreadsheet, tab_title: str, rows: list[list]) -> None:
@@ -51,7 +57,8 @@ def _write_tab(sh: gspread.Spreadsheet, tab_title: str, rows: list[list]) -> Non
 
     ws.clear()
     if rows:
-        ws.update(rows, value_input_option="USER_ENTERED")
+        serialized = [[_serialize(v) for v in row] for row in rows]
+        ws.update(serialized, value_input_option="USER_ENTERED")
 
 
 def push_daily_stats(
