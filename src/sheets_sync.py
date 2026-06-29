@@ -83,8 +83,8 @@ def push_daily_stats(
         f"WHERE stat_date = ? ORDER BY player_name",
         [stat_date],
     ).fetchall()
-    _write_tab(sh, "Pitcher Stats", [pitcher_cols] + [list(r) for r in pitcher_rows])
-    print(f"Pitcher Stats tab: {len(pitcher_rows)} rows")
+    _write_tab(sh, f"Pitchers {stat_date}", [pitcher_cols] + [list(r) for r in pitcher_rows])
+    print(f"Pitchers {stat_date} tab: {len(pitcher_rows)} rows")
 
     # --- batter tab ---
     batter_cols = [
@@ -100,8 +100,8 @@ def push_daily_stats(
         f"WHERE stat_date = ? ORDER BY player_name",
         [stat_date],
     ).fetchall()
-    _write_tab(sh, "Batter Stats", [batter_cols] + [list(r) for r in batter_rows])
-    print(f"Batter Stats tab:  {len(batter_rows)} rows")
+    _write_tab(sh, f"Batters {stat_date}", [batter_cols] + [list(r) for r in batter_rows])
+    print(f"Batters {stat_date} tab:  {len(batter_rows)} rows")
 
     # remove default blank Sheet1 if it still exists
     try:
