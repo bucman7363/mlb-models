@@ -102,6 +102,16 @@ def get_active_roster(team_id: int, season: int) -> list[dict]:
     ]
 
 
+def get_pitcher_hand(player_id: int) -> str | None:
+    """Returns 'L' or 'R' for the pitcher's throwing hand."""
+    r = requests.get(f"{BASE_URL}/people/{player_id}", timeout=15)
+    r.raise_for_status()
+    people = r.json().get("people", [])
+    if not people:
+        return None
+    return people[0].get("pitchHand", {}).get("code")
+
+
 def get_player_split_stats(player_id: int, season: int, sit_code: str) -> dict | None:
     """sit_code: 'vl' (vs LHP) or 'vr' (vs RHP). Returns the stat dict or None."""
     r = requests.get(
