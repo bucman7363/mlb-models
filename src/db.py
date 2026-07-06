@@ -51,6 +51,24 @@ CREATE TABLE IF NOT EXISTS league_constants (
     updated_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS fielding_stats (
+    player_id INTEGER NOT NULL,
+    stat_date DATE NOT NULL,
+    season INTEGER NOT NULL,
+    player_name VARCHAR,
+    team_id INTEGER,
+    position VARCHAR,
+    innings_played DOUBLE,
+    putouts INTEGER,
+    assists INTEGER,
+    errors INTEGER,
+    fielding_pct DOUBLE,
+    range_factor DOUBLE,
+    oaa INTEGER,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (player_id, stat_date, position)
+);
+
 CREATE TABLE IF NOT EXISTS pitcher_stats (
     player_id INTEGER NOT NULL,
     stat_date DATE NOT NULL,
