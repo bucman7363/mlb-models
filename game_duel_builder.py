@@ -191,6 +191,7 @@ def main():
     season = int(date_str[:4])
     teams = mlb_api.get_teams(season)
     team_map = {t["id"]: t["name"] for t in teams}
+    abbr_map = {t["id"]: t.get("abbreviation", t["name"][:3].upper()) for t in teams}
 
     games = mlb_api.get_schedule_with_starters(date_str)
     game_groups: dict[int, list] = {}
@@ -209,7 +210,7 @@ def main():
         away["team_name"] = team_map.get(away["team_id"], str(away["team_id"]))
         home["team_name"] = team_map.get(home["team_id"], str(home["team_id"]))
 
-        tab_name = f"{away['team_name'][:12]} @ {home['team_name'][:12]}"
+        tab_name = f"{abbr_map.get(away['team_id'], away['team_name'][:3])} @ {abbr_map.get(home['team_id'], home['team_name'][:3])}"
         tab_rows = build_game_tab(con, away, home, stat_date, date_str)
 
         sheets_sync._write_tab(sh, tab_name, tab_rows)
