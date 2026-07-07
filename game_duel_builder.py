@@ -506,8 +506,25 @@ def main():
     matchups = [s for s in game_groups.values() if len(s) == 2]
     print(f"Building {len(matchups)} dashboard tabs for {date_str} (stats: {stat_date})...")
 
-    # Track tab names for doubleheaders
+    # Build the full set of tab names for today so we can purge stale tabs
     seen: dict[str, int] = {}
+    today_tabs: set[str] = set()
+    for sides in matchups:
+        away = next((s for s in sides if s["side"] == "away"), sides[0])
+        home = next((s for s in sides if s["side"] == "home"), sides[1])
+        base = f"{abbr_map.get(away['team_id'],'???')} @ {abbr_map.get(home['team_id'],'???')}"
+        count = seen.get(base, 0) + 1
+        seen[base] = count
+        today_tabs.add(base if count == 1 else f"{base} G{count}")
+
+    # Delete any tabs not in today's game list
+    for ws in sh.worksheets():
+        if ws.title not in today_tabs:
+            sh.del_worksheet(ws)
+            print(f"  removed stale tab: {ws.title}")
+            time.sleep(0.5)
+
+    seen = {}  # reset for the write loop below
 
     for sides in matchups:
         away = next((s for s in sides if s["side"] == "away"), sides[0])
