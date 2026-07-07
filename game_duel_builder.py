@@ -220,24 +220,33 @@ def build_dashboard_tab(
     home_bat = get_team_batting_splits(home_id, season, game_date)
 
     # SP season stats from DB
-    away_sp_db = (con.execute(
-        "SELECT era, whip, xfip, k_pct, bb_pct, innings_pitched, strikeouts, walks "
-        "FROM pitcher_stats WHERE player_id = ? AND stat_date = ?",
-        [away_sp_id, stat_date]).fetchone() or [None]*8) if away_sp_id else [None]*8
-    home_sp_db = (con.execute(
-        "SELECT era, whip, xfip, k_pct, bb_pct, innings_pitched, strikeouts, walks "
-        "FROM pitcher_stats WHERE player_id = ? AND stat_date = ?",
-        [home_sp_id, stat_date]).fetchone() or [None]*8) if home_sp_id else [None]*8
+    def _sp_row(pid):
+        if not pid:
+            return [None] * 8
+        return (con.execute(
+            "SELECT era, whip, xfip, k_pct, bb_pct, innings_pitched, strikeouts, walks "
+            "FROM pitcher_stats WHERE player_id = ? AND stat_date <= ? "
+            "ORDER BY stat_date DESC LIMIT 1", [pid, stat_date]
+        ).fetchone() or [None] * 8)
+
+    away_sp_db = _sp_row(away_sp_id)
+    home_sp_db = _sp_row(home_sp_id)
 
     def sp_db(row, i): return row[i] if row else None
     AWAY, HOME = away_sp_db, home_sp_db
 
     # Bullpen: relievers (IP < 40 for season) aggregated per team
     def team_bullpen(team_id):
+        latest = con.execute(
+            "SELECT MAX(stat_date) FROM pitcher_stats WHERE team_id = ? AND stat_date <= ?",
+            [team_id, stat_date]
+        ).fetchone()[0]
+        if not latest:
+            return {}
         rows = con.execute(
             "SELECT era, innings_pitched, whiff_pct, strikeouts, walks FROM pitcher_stats "
             "WHERE team_id = ? AND stat_date = ? AND innings_pitched < 40",
-            [team_id, stat_date],
+            [team_id, latest],
         ).fetchall()
         if not rows:
             return {}
