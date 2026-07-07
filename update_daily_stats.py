@@ -15,9 +15,30 @@ Usage:
     python update_daily_stats.py [YYYY-MM-DD] [--sheets] [--sheets-email you@gmail.com]
 """
 import datetime as dt
+import signal
 import sys
 
 from src import db, mlb_api, season_stats
+
+PLAYER_TIMEOUT = 90  # seconds — kills any hung Statcast call
+
+
+class _PlayerTimeout(Exception):
+    pass
+
+
+def _run_with_timeout(fn, *args):
+    """Run fn(*args) and raise _PlayerTimeout if it takes > PLAYER_TIMEOUT seconds."""
+    def _handler(signum, frame):
+        raise _PlayerTimeout()
+
+    old = signal.signal(signal.SIGALRM, _handler)
+    signal.alarm(PLAYER_TIMEOUT)
+    try:
+        return fn(*args)
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
 
 
 def main():
@@ -55,25 +76,33 @@ def main():
 
             if is_pitcher:
                 try:
-                    row = season_stats.pull_pitcher_daily_stats(
-                        con, pid, pname, team_id, season, stat_date
+                    row = _run_with_timeout(
+                        season_stats.pull_pitcher_daily_stats,
+                        con, pid, pname, team_id, season, stat_date,
                     )
                     if row:
                         p_ok += 1
                     else:
                         p_skip += 1
+                except _PlayerTimeout:
+                    print(f"    WARN pitcher {pname} ({pid}): timed out after {PLAYER_TIMEOUT}s — skipped")
+                    p_skip += 1
                 except Exception as exc:
                     print(f"    WARN pitcher {pname} ({pid}): {exc}")
                     p_skip += 1
             else:
                 try:
-                    row = season_stats.pull_batter_daily_stats(
-                        con, pid, pname, team_id, season, stat_date
+                    row = _run_with_timeout(
+                        season_stats.pull_batter_daily_stats,
+                        con, pid, pname, team_id, season, stat_date,
                     )
                     if row:
                         b_ok += 1
                     else:
                         b_skip += 1
+                except _PlayerTimeout:
+                    print(f"    WARN batter {pname} ({pid}): timed out after {PLAYER_TIMEOUT}s — skipped")
+                    b_skip += 1
                 except Exception as exc:
                     print(f"    WARN batter {pname} ({pid}): {exc}")
                     b_skip += 1
